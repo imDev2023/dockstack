@@ -52,6 +52,15 @@ Set `SITE` if the address ever changes, since X reads the card image from it.
 
 Dockstack began as a calibration run in [x-gaming](https://github.com/imDev2023/x-gaming), where the [full build record](https://github.com/imDev2023/x-gaming/blob/main/calibration/2026-11-06-video2game/README.md) lives: the concept video, the spec, the Blender scripts, the playtests and every fal call with its cost.
 
+## Licence
+
+Use it however you want: copy it, change it, sell it or build your own game from it, with no credit required.
+
+- **Code:** MIT No Attribution, in [LICENSE](LICENSE).
+- **Models, images, sounds, icon and link card:** dedicated to the public domain under CC0 1.0, in [LICENSE-ASSETS](LICENSE-ASSETS).
+- **One condition we cannot waive:** the page began from the MIT-licensed Video2Game template, so copies of the code keep its notice, in [NOTICE](NOTICE).
+- The images and sounds were generated on fal, and those services' own output terms may also apply; see [CREDITS.md](CREDITS.md).
+
 ## Next
 
 A daily top 10 with no sign-in, accepting only scores the server has replayed: [x-gaming#5](https://github.com/imDev2023/x-gaming/issues/5).
