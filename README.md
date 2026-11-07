@@ -40,6 +40,19 @@ URL parameters: `?seed=N` (default: today's UTC date as `YYYYMMDD`, the daily ch
 Set `SITE` if the address ever changes, since X reads the card image from it.
 `dist/` is not committed; the first deploy from a fresh clone needs `vercel link --project dockstack` inside it.
 
+## Record a gameplay video
+
+```bash
+./deploy.sh && python3 -m http.server 8000 -d dist   # in one terminal
+cd tools && npm install
+node render-video.mjs http://127.0.0.1:8000/ ../media/run.mp4 1920 1080
+```
+
+[render-video.mjs](tools/render-video.mjs) renders a run frame by frame at 60 fps with the game's own sound, so the video never stutters however slow the machine is.
+It replaces the page's clock with one that moves exactly 1/60 s per captured frame, logs every sound on that clock, and mixes the original sound files to match.
+[autoplay.js](tools/autoplay.js) plays the run by reading `window.__game.state` and pressing Space like a player.
+`media/` is not committed.
+
 ## How it is built
 
 - **Page:** [index.html](index.html), one file on Three.js r170: the scene, the camera, the sound and the overlays.
