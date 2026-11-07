@@ -51,6 +51,25 @@
   #hud i.placed { background: #fff4e4; border-color: #fff4e4; }
   #hud i.lost { border-color: rgba(120, 40, 20, 0.7); background: rgba(120, 40, 20, 0.35); }
   #hud i.now { border-color: #ffd27a; }
+  #controls { position: fixed; top: max(8px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right));
+    display: flex; gap: 8px; transition: opacity 0.3s ease; }
+  #controls.hidden { pointer-events: none; }
+  #controls button { width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(58, 30, 14, 0.42); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); color: var(--ink);
+    box-shadow: 0 1px 4px var(--shade); cursor: pointer; touch-action: manipulation; }
+  #controls button:hover { background: rgba(58, 30, 14, 0.6); }
+  #controls button:focus-visible { outline: 2px solid #ffd27a; outline-offset: 2px; }
+  #controls svg { width: 18px; height: 18px; }
+  @media (max-width: 400px) {
+    #hud { gap: 4px; } #hud i { width: 10px; height: 10px; }
+    #controls { gap: 6px; } #controls button { width: 40px; height: 40px; }
+  }
+  #pause .play, #pause.on .bars { display: none; }
+  #pause.on .play { display: block; }
+  #paused { top: 30vh; left: 50%; right: auto; transform: translateX(-50%); width: max-content; max-width: calc(100vw - 32px);
+    box-sizing: border-box; padding: 14px 28px 18px; }
+  #paused .line { margin: 0; font-size: clamp(24px, 4vw, 42px); font-weight: 800; }
+  #paused p.again { margin: 8px 0 0; font-size: clamp(15px, 2vw, 19px); font-weight: 600; }
   #debug { position: fixed; right: 10px; bottom: 8px; font: 12px ui-monospace, Menlo, monospace; color: #fff; opacity: 0.8; pointer-events: none; }
 </style>
 <script type="importmap">
@@ -72,7 +91,7 @@
       <li>The hook speeds up and the boat rocks, so time each drop.</li>
       <li>Load all 15 crates. Most crates wins, then the tallest stack.</li>
     </ol>
-    <p class="small">A new shipment every day, the same for everyone.<span class="keys"><br>Press <kbd>M</kbd> to mute the sound.</span></p>
+    <p class="small">A new shipment every day, the same for everyone.<span class="keys"><br><kbd>P</kbd> pauses, <kbd>R</kbd> restarts, <kbd>M</kbd> mutes.</span></p>
   </div>
   <p id="go">Loading the harbour...</p>
 </div>
@@ -85,6 +104,14 @@
   </div>
 </div>
 <div id="hud" class="hidden"></div>
+<div id="controls" class="hidden">
+  <button id="pause" type="button" aria-label="Pause" title="Pause (P)"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="bars" fill="currentColor" d="M6 4h4v16H6zM14 4h4v16h-4z"/><path class="play" fill="currentColor" d="M7 4.5v15a1 1 0 0 0 1.5.86l12.4-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5Z"/></svg></button>
+  <button id="restart" type="button" aria-label="Restart" title="Restart (R)"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" d="M19.5 12a7.5 7.5 0 1 1-2.6-5.7"/><path fill="currentColor" d="M20.6 2.6v6.6H14z"/></svg></button>
+</div>
+<div id="paused" class="overlay panel hidden">
+  <p class="line">Paused</p>
+  <p class="again">Tap anywhere to carry on</p>
+</div>
 <div id="debug"></div>
 <script type="module">
 // Dockstack: the video's harbour, rebuilt as a stacking game around sim.js.
@@ -459,7 +486,8 @@ function updateFx(dt) {
 }
 
 // ---------- game state ----------
-const ui = { title: document.getElementById('title'), end: document.getElementById('end'), hud: document.getElementById('hud'), debug: document.getElementById('debug') };
+const ui = { title: document.getElementById('title'), end: document.getElementById('end'), hud: document.getElementById('hud'), debug: document.getElementById('debug'),
+  controls: document.getElementById('controls'), pause: document.getElementById('pause'), paused: document.getElementById('paused') };
 let sim = null, prev = null, phase = 'loading', pressed = false, acc = 0, simTime = 0;
 let hookY = 0, hookYTarget = 0, lastHookX = 0, departX = 0;
 // With ?debug, check every frame that drawing left the simulation's state untouched:
@@ -486,6 +514,9 @@ function hud() {
 }
 function newRun() {
   for (const m of world.stack) world.boat.remove(m);
+  // A restart can come while lost crates are still tipping, falling or sinking.
+  for (const f of world.fx) { scene.remove(f.mesh); if (f.pivot) scene.remove(f.pivot); }
+  world.fx = [];
   world.stack = [];
   world.outcomes = [];
   if (world.active) scene.remove(world.active);
@@ -517,10 +548,40 @@ function showBest(score, placed, height) {
 }
 function start() {
   if (phase === 'playing') return;
+  if (phase === 'paused') { resume(); return; }
   if (phase === 'done') newRun();
   phase = 'playing';
   ui.title.classList.add('hidden'); ui.end.classList.add('hidden'); ui.hud.classList.remove('hidden');
+  ui.controls.classList.remove('hidden');
   startAudio();
+}
+// Pausing stops the simulation's clock; the run carries on from the same tick, so a
+// paused run replays exactly like one played straight through.
+function setPaused(on) {
+  ui.pause.classList.toggle('on', on);
+  ui.pause.setAttribute('aria-label', on ? 'Resume' : 'Pause');
+  ui.pause.title = on ? 'Resume (P)' : 'Pause (P)';
+  ui.paused.classList.toggle('hidden', !on);
+}
+function pause() {
+  if (phase !== 'playing') return;
+  phase = 'paused'; pressed = false;
+  setPaused(true);
+  audio.ctx?.suspend();
+}
+function resume() {
+  if (phase !== 'paused') return;
+  phase = 'playing'; pressed = false;
+  setPaused(false);
+  audio.ctx?.resume();
+}
+// A restart deals the same shipment again from its first crate.
+function restart() {
+  if (phase !== 'playing' && phase !== 'paused' && phase !== 'done') return;
+  if (phase === 'paused') resume();
+  phase = 'done';
+  acc = 0; pressed = false;
+  start();
 }
 
 function onEvents(events) {
@@ -563,6 +624,7 @@ function onEvents(events) {
       play('horn', 0.9);
     } else if (e.type === 'done') {
       phase = 'done';
+      ui.controls.classList.add('hidden');
       const height = M(SIM.stackTop(sim)).toFixed(1);
       ui.end.querySelector('.line').textContent = `Loaded ${sim.placed} of ${SIM.SHIPMENT} · stack ${height} m`;
       showBest(SIM.score(sim), sim.placed, height);
@@ -583,17 +645,22 @@ function tick() {
 
 // ---------- input ----------
 function press() {
-  if (phase === 'title' || phase === 'done') { start(); return; }
+  if (phase === 'title' || phase === 'done' || phase === 'paused') { start(); return; }
   if (phase === 'playing') pressed = true;
 }
 addEventListener('keydown', (e) => {
   if (e.repeat) return;
-  if (e.code === 'Space' || e.code === 'Enter' || e.code === 'ArrowDown') { e.preventDefault(); press(); }
-  else if (e.code === 'KeyR' && phase === 'done') start();
+  const onButton = e.target.closest?.('button');
+  if (e.code === 'Space' || e.code === 'Enter' || e.code === 'ArrowDown') { if (onButton) return; e.preventDefault(); press(); }
+  else if (e.code === 'KeyP' || e.code === 'Escape') { if (phase === 'playing') pause(); else if (phase === 'paused') resume(); }
+  else if (e.code === 'KeyR') restart();
   else if (e.code === 'KeyM' && audio.master) { audio.muted = !audio.muted; audio.master.gain.value = audio.muted ? 0 : 1; }
 });
+ui.pause.addEventListener('click', () => (phase === 'paused' ? resume() : pause()));
+document.getElementById('restart').addEventListener('click', restart);
 addEventListener('pointerdown', (e) => {
   if (e.target.closest?.('a')) return; // the share link opens; it must not restart the run
+  if (e.target.closest?.('button')) { e.preventDefault(); return; } // buttons act on click, without taking focus from Space
   e.preventDefault(); press();
 }, { passive: false });
 let padWas = false;
@@ -715,7 +782,7 @@ function frame(t) {
   }
   if (sim) draw(dt, Math.min(1, acc * SIM.TICK_HZ));
   if (GUARD && sim && guardHash && SIM.hash(sim) !== guardHash) { console.error('the renderer changed the simulation state at tick', sim.tick); guardHash = SIM.hash(sim); }
-  updateFx(dt);
+  if (phase !== 'paused') updateFx(dt);
   placeCamera(dt);
   water.material.uniforms.uTime.value = wall;
   grade.uniforms.uTime.value = wall;
@@ -733,7 +800,7 @@ function resize() {
   composer.setSize(innerWidth, innerHeight);
 }
 addEventListener('resize', resize);
-document.addEventListener('visibilitychange', () => { last = performance.now(); });
+document.addEventListener('visibilitychange', () => { last = performance.now(); if (document.hidden) pause(); });
 
 // Read-only state for playtest scenarios, in metres in the boat's frame; scenarios
 // press keys like a player and never write into the game.
@@ -770,6 +837,7 @@ phase = 'title';
 ui.title.classList.add('ready');
 const TOUCH = matchMedia('(pointer: coarse)').matches;
 document.getElementById('go').textContent = TOUCH ? 'Tap anywhere to start' : 'Click or press Space to start';
+ui.paused.querySelector('.again').textContent = TOUCH ? 'Tap anywhere to carry on' : 'Click or press Space to carry on';
 ui.end.querySelector('.again').textContent = TOUCH ? 'or tap to play again' : 'or click to play again';
 resize();
 requestAnimationFrame(frame);

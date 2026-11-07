@@ -17,7 +17,8 @@ A new shipment every day, the same for everyone.
 
 A run takes about 40 s.
 Your best score for the day is kept in your browser, and the end card has a Share on X button.
-`M` mutes the sound and `R` restarts at the end.
+The buttons in the top-right corner pause and restart a run; `P` or `Esc` pauses, `R` restarts and `M` mutes the sound.
+A run also pauses when you switch tabs, and a restart deals the same shipment again.
 
 ## Run it locally
 
