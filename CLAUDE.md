@@ -9,18 +9,21 @@ It began as calibration 4 in `../x-gaming` (github.com/imDev2023/x-gaming); this
   Load the page with `?debug`, which logs an error if drawing writes into the simulation's state.
 - Publish only with `./deploy.sh --prod`, after the tests pass and a local run of `dist/` plays through; `dist/` keeps its Vercel link in `dist/.vercel`.
 - Use Vercel for hosting; the owner asked not to use Cloudflare for this game.
-- The owner chose no sign-in and no blockchain for now (2026-11-06): anyone can play, and the best score stays in their browser.
+- The owner chose no sign-in and no blockchain for this game (2026-11-06): anyone can play, and the best score stays in their browser.
+- Licence (owner, 2026-11-07): anyone may use it however they want, so code is MIT No Attribution and our assets CC0; keep `NOTICE`, which the Video2Game template's MIT licence requires.
+- Pausing must never touch `sim.js`: a run paused midway replays to the same score (checked 2026-11-07), and any new control has to keep that true.
+- Gameplay videos come from `tools/render-video.mjs` (README, "Record a gameplay video"); the 2026-11-07 X video is in the untracked `media/`.
 - The repo is public: no keys, no paid fal outputs beyond the shipped assets, and no copied text or screenshots of other people's work.
 - Generation calls (fal and the like) are paid and need the owner's approval each time.
 
 ## Issues
 
-Issues are tracked on github.com/imDev2023/x-gaming, where Dockstack started; the next one is #5, a daily top 10 with no sign-in.
+Issues are tracked on github.com/imDev2023/x-gaming, where Dockstack started: #5 (a daily top 10 with no sign-in) is open, and #4 (on-chain leaderboard) waits on the owner.
 
 ## Multica dashboard
 
 This project is mirrored on the owner's Multica dashboard (workspace Pandora) under the x-gaming project `5e65d424-8653-4e40-8aca-449c8e90891c`.
 GitHub Issues on `imDev2023/x-gaming` stay the source of truth; Multica only mirrors them, and each Multica ticket title starts with its issue number.
 At the end of every session, after the issues are updated, run the `multica-sync` skill for that project: mirror ticket statuses, add any new tickets, and refresh the project's "Current step" section.
-Every Multica write passes `--no-start` and no ticket is ever assigned to an agent, so the sync never starts an agent run.
+Every status and assignment write passes `--no-start` (`issue create` rejects the flag), and no ticket is ever assigned to an agent, so the sync never starts an agent run.
 If the `multica` CLI is not signed in, say so in the session summary and stop anyway; the sync never blocks the work.
